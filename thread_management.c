@@ -74,8 +74,8 @@ spawn_threads(void)
 void
 declare_as_initialized(void)
 {
-    // declare the calling thread as initialised and ready to operate
-    // block until all threads are initialised or one failed
+    // declare the calling thread as initialized and ready to operate
+    // block until all threads are initialized or one failed
     pthread_mutex_lock(&init_mutex);
     thread_init_states[get_thread_id()] = 1;
     pthread_cond_broadcast(&init_cond);
