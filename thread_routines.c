@@ -13,6 +13,9 @@ controller_routine(void *sem)
     // at least initialize sem, and declare as initialized at the end
     sem_init(sem, 0, 0);
     declare_as_initialized();
+    if (should_terminate()) {
+        goto cleanup;
+    }
 
     // MAIN LOOP
     while (1) {
@@ -21,11 +24,12 @@ controller_routine(void *sem)
         // check all possible tasks, always starting by checking if the thread
         // should terminate, then process the event
         if (should_terminate()) {
-            break;
+            goto cleanup;
         // } else if (...) {
         }
     }
 
+cleanup:
     // DEINITIALIZATION
     // whatever cleanup is required
 

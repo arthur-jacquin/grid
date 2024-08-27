@@ -64,25 +64,25 @@ Wrapping up all of the above give the following thread routine template:
 void *
 thread_start_routine(void *sem)
 {
-    // INITIALIZATION
-    ...
-    sem_init(sem, 0, 0);                // needed
-    declare_as_initialized();           // needed
+    sem_init(sem, 0, 0);
+    ...                                 // initialization
+    declare_as_initialized();
+    if (should_terminate()) {
+        goto cleanup;
+    }
 
-    // MAIN LOOP
-    while (1) {
+    while (1) {                         // main loop
         sem_wait(sem);                  // wait for tasks
-        if (should_terminate()) {       // needed
-            break;
+        if (should_terminate()) {
+            goto cleanup;
         } else if (...) {               // check for all other possible tasks
             ...                         // process the event
         }
     }
 
-    // DEINITIALIZATION
-    ...
-
-    return NULL;                        // return nothing
+cleanup:
+    ...                                 // deinitialization
+    return NULL;
 }
 </pre>
 
