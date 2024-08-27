@@ -6,7 +6,7 @@ include config.mk
 SRC = client.c
 LIB = thread_management.c thread_routines.c
 OBJ = ${SRC:.c=.o}
-LIBOBJ = ${LIB:.c=.o}
+LIBOBJ = ${LIB:.c=.o} clic.o
 EXE = ${SRC:.c=}
 
 all: options ${EXE}
@@ -24,10 +24,10 @@ ${OBJ} ${LIB:.c=.o}: %.o: %.c config.h
 	${CC} -c ${CFLAGS} -o $@ $<
 
 clic.o: %.o: %.h
-	${CC} -c ${CFLAGS} -o $@ $< -DCLIC_IMPL
+	${CC} -c ${CFLAGS} -o $@ -x c $< -DCLIC_IMPL
 
 termbox2.o: %.o: %.h
-	${CC} -c ${CFLAGS} -o $@ $< -DTB_IMPL
+	${CC} -c ${CFLAGS} -o $@ -x c $< -DTB_IMPL
 
 ${EXE}: %: %.o ${LIBOBJ}
 	${CC} ${LDFLAGS} -o $@ $< ${LIBOBJ}
