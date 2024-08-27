@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Laying the foundations for the data model</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="grid_series.css">
+</head>
+<body>
+<div style="display:table;margin:16px auto" id="a"><div id="b"><pre>
+
+
+
+Laying the foundations for the data model
+________________________________________________________________________________
+
+
+Note: this article is part of the "Building a graphical multi-user spreadsheet
+editor in Zig" series. Read all the articles <a href="grid_series">here</a>.
+
+The design process was: <a class="t" href="#001">uses</a> -> <a class="t" href="#002">data model</a> -> <a class="t" href="#003">file format and encoding</a> (where
+each arrow means "determine"). So let's get started!
+
+
+-- <span id="001">[<a class="t" href="#001">001</a>]</span> Uses ------------------------------------------------------------------
+
+What are the legitimate uses for spreadsheets? Are there any? Does mixing data
+and computing logic even make sense? To be honest, I'm pretty sure that using
+them for anything other than specific, one-time tasks is a bad idea. Still, I do
+believe spreadsheets are a rather unique computing engine.
+
+Then, what am I reaching for when I fire up a spreadsheet editor?
+* being able to build the computing logic in small steps, each cell doing a
+  little part of the job and displaying its value at any time (which is perfect
+  for instant feedback and debug)
+* using formula patterns to define whole areas of cells at once
+* using conditionnal formatting to draw my attention to specific cells
+
+The data model should target this use.
+
+
+-- <span id="002">[<a class="t" href="#002">002</a>]</span> Data model ------------------------------------------------------------
+
+A spreadsheet file is a set of definitions and metadata (such as sheet names).
+
+Each definition is:
+* an application area (possibly only one cell), including sheet identifier,
+* an optionnal content: a formula or a literal (bool, float, integer or string),
+* an optionnal conditionnal emphasis rule, and
+* an optionnal format if content is a float or an integer (percent/currency/
+  datetime/hex/binary...).
+
+
+-- <span id="003">[<a class="t" href="#003">003</a>]</span> File format and encoding ----------------------------------------------
+
+I want grid to be a good UNIX citizen, that interoperates well with other tools.
+I have command-line scriptability and <code>.csv</code>-awareness in mind, but the most
+important point is the use of a textual file format.
+
+Plain text unties the data from the tool. It allows the use of any text editor
+or UNIX tool (grep, sed, piping...). It allows version control. Plain text is
+power for everyone.
+
+The encoding of data as text should:
+* be designed according to the data model
+* be stable and clearly documented (to not break other tools that might use it)
+* be easy to parse and emit (and especially make it easy to discard malicious
+  data when parsing)
+* have a good readability/compactness ratio (more verbosity for easy parsing
+  should be preferred over compactness)
+* aim to produce small changes in encoded data given small changes in data, so
+  that only meaningful changes appear in version control systems
+
+The details of the encoding are not ready yet.
+
+
+
+
+
+
+
+
+
+
+</pre></div></div>
+</body></html>

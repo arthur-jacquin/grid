@@ -1,0 +1,11 @@
+* pthread_queue.c
+* Makefile vs build.zig
+=> https://makefiletutorial.com
+* client-server architecture, sockets, protocols
+* More on the data model: data types...
+* how to store and synchronize data (caching, graphs, etc)
+* discovering raylib
+* designing a graphical UX
+* switching to zig, using some C parts
+* parsing formulas
+* profiling and optimising

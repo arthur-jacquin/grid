@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Building a graphical multi-user spreadsheet editor in Zig, introduction</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="grid_series.css">
+</head>
+<body>
+<div style="display:table;margin:16px auto" id="a"><div id="b"><pre>
+
+
+
+Building a graphical multi-user spreadsheet editor in Zig, introduction
+________________________________________________________________________________
+
+
+Note: this article is part of the "Building a graphical multi-user spreadsheet
+editor in Zig" series. Read all the articles <a href="grid_series">here</a>.
+
+It's been a while since my last project (<a href="edit">edit</a>, a text editor in C). I've had
+many other project ideas since then, but I haven't taken the time to bring them
+to life. Now I have some free time over the next two months, and I'm willing to
+use some of it for a nice software project: grid, a spreadsheet editor!
+
+
+-- <span id="001">[<a class="t" href="#001">001</a>]</span> Why I'm writing about it ----------------------------------------------
+
+This blog entry is (hopefully!) the first of a series documenting my progress.
+There are two reasons to do that.
+
+First, I expect to explore many new topics during the project, wether it is Zig
+features, computer science concepts, data structures, or algorithms. Writing
+about my findings will allow me to clarify my understanding, and you might find
+them interesting as well.
+
+Second, it might drive my motivation to carry on the project, as I will want
+to wrap this series up nicely.
+
+
+-- <span id="002">[<a class="t" href="#002">002</a>]</span> Why a spreadsheet editor ----------------------------------------------
+
+Unlike my text editor, I very seldom use spreadsheet editors. I think it's a key
+point in the project: I'm not designing and building grid for my personal use,
+frustrated with existing tools, but for the learning experience. Thus, what do I
+expect to learn?
+
+* Multi-user software. Latencies between users induce state replicas
+  inconsistencies, which calls for consistency restoration and data integrity
+  preservation tools.
+
+* Networking. grid will use a client-server model, communicating through
+  sockets with yet-to-be-designed protocols. If it ends up on a publicly
+  available web "application", it will require security stuff.
+
+* Multithreading, for both the server (managing several clients) and the client
+  (modifying the state considering user actions, rendering to the screen,
+  handling user input, handling the connection with the server).
+
+* Graphical interface. <a href="https://www.raylib.com/">raylib</a> caught my eye recently. Even though I keep the
+  idea of a text-based interface in mind, leveraging the information display
+  density of the graphical interface seems to be the good fit for something as
+  complex as spreasheets.
+
+* Demanding interpretation engine and data management. Spreadsheets cells
+  contain formulas to parse and compute (and cells might depend on others
+  cells). Spreadsheets can hold large amounts of data. Managing all that in a
+  high-performance way calls for optimized data structures and some graph
+  theory.
+
+Quite an ambitious roadmap!
+
+
+-- <span id="003">[<a class="t" href="#003">003</a>]</span> Why Zig ---------------------------------------------------------------
+
+I've never used <a href="https://ziglang.org">Zig</a>. However, I figured it might be a good fit for this project.
+
+First, Zig is advertised as a simple language, something I like and need for
+performance. Its great C-interoperability should allow me to use the unmodified
+raylib source code (in C), and to get back to C for some parts.
+
+In addition, its cross-compilation abilities enable targeting several client
+types: native (any platform) or website (with WebAssembly). As I develop on WSL
+Linux but can only run graphical applications on Windows, cross compilation is
+especially precious.
+
+Finally, I'm curious of Zig modern (compared to C) and innovative features:
+payload capture, tests, struct methods, optionals, defer, error management...
+
+
+-- <span id="004">[<a class="t" href="#004">004</a>]</span> Goals -----------------------------------------------------------------
+
+My goals for grid are:
+* to implement the points in <a class="t" href="#002">"Why a spreadsheet editor"</a> as well as possible
+* to design a capable data model that works well with text-based version
+  control systems
+* to offer a responsive (no matter how good the connection to the server is) and
+  explicit (easy to explore features and to understand what's going on) user
+  experience
+
+And aside from the final product:
+* to write idiomatic Zig code
+* to post frequent updates on the evolution of the project
+* not to prematurely optimize
+
+
+
+
+
+
+
+
+
+
+</pre></div></div>
+</body></html>

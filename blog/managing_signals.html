@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Managing signals in a multithreaded environment</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="grid_series.css">
+</head>
+<body>
+<div style="display:table;margin:16px auto" id="a"><div id="b"><pre>
+
+
+
+Managing signals in a multithreaded environment
+________________________________________________________________________________
+
+
+Note: this article is part of the "Building a graphical multi-user spreadsheet
+editor in Zig" series. Read all the articles <a href="grid_series">here</a>.
+
+Note: latest commit while writing this article: <a href="https://github.com/arthur-jacquin/grid/tree/e520cf3">e520cf3</a>
+
+
+-- <span id="001">[<a class="t" href="#001">001</a>]</span> Goals -----------------------------------------------------------------
+
+In <a href="client_architecture">a previous post</a>, I described the different threads and how they exchange
+data, but left aside how these threads can be managed by the main thread. One
+particular point is the signal management, something I have never done.
+
+So let's figure this out! Here are the questions I have:
+* how to prevent threads from calling the service of a yet-uninitialized thread?
+* how to clean ressources before termination, even when termination is due to
+  a signal?
+* how to handle signals?
+
+
+-- <span id="002">[<a class="t" href="#002">002</a>]</span> Managing threads ------------------------------------------------------
+
+Managing threads requires to store some information. For example, the thread
+identifiers must be stored to later join the threads, and semaphores are used to
+distribute tasks to threads. Most of this information should be hidden from
+threads, to comply with the principle of least privilege and improve the
+robustness of the code.
+
+Spawned threads are only communicated their associated semaphore, so that they
+can wait for tasks. Distributing a task to another thread can only be done via
+the <code>post_to()</code> interface.
+
+To ensure no thread is using uninitialized ressources from another thread, they
+synchronize at the end of their initialization. <code>declare_as_initialized()</code>
+declares the calling thread as initialized and ready to operate, and then blocks
+until all threads are initialized (or until one fails). Notice that the function
+figures out which thread is calling by itself, so that the thread doesn't manage
+its own identity.
+
+To clean ressources before termination, the <code>request_termination()</code> function is
+exposed to the threads. Instead of exiting immediately, it stores the
+termination request and notify the other threads, so that they can perform a
+proper cleanup too.
+
+Wrapping up all of the above give the following thread routine template:
+
+<pre class="code">
+void *
+thread_start_routine(void *sem)
+{
+    // INITIALIZATION
+    ...
+    sem_init(sem, 0, 0);                // needed
+    declare_as_initialized();           // needed
+
+    // MAIN LOOP
+    while (1) {
+        sem_wait(sem);                  // wait for tasks
+        if (should_terminate()) {       // needed
+            break;
+        } else if (...) {               // check for all other possible tasks
+            ...                         // process the event
+        }
+    }
+
+    // DEINITIALIZATION
+    ...
+
+    return NULL;                        // return nothing
+}
+</pre>
+
+-- <span id="003">[<a class="t" href="#003">003</a>]</span> Handling signals ------------------------------------------------------
+
+Here are some key points to keep in mind while handling signals:
+
+* Signals are used to notify an event to a process.
+
+* The default behaviour of most signals can be overriden to explicitely ignore
+  them or to use a custom signal handler (set with <code>sigaction()</code>). However, some
+  can't be caught (e.g. SIGKILL).
+
+* Signals can be blocked using a signal mask and <code>pthread_sigmask()</code>. Signal masks
+  are per thread (while signal handlers are per process), and inherited upon
+  thread creation. <code>sigwait()</code> can be used to detect and consume pending (blocked)
+  signals.
+
+* A signal is only delivered to one thread. A signal can be directed to a
+  specific thread (for example, using <code>pthread_kill()</code>), in which case it is
+  delivered to it. Else:
+    * if all threads block it, the signal is pending
+    * else, the signal is arbitrarily delivered to one of the threads that
+      don't block it
+
+* There are two types of signals: synchronous ones (resulting of a program
+  action, e.g. SIGSEGV) and asynchronous ones (independent of the program, e.g.
+  SIGINT or SIGKILL). A synchronous signal is always directed to the thread that
+  generated it.
+
+Asynchronous signals can occur at any time, including when a thread locked
+ressources needed by a potential signal handler. If ever the signal is delivered
+to that very thread, it creates a deadlock. For this reason, asynchronous signal
+handling should be done in a dedicated thread.
+
+One way to make sure all asynchronous signals are delivered to the signal
+handling thread is to block them all at program startup (before any thread
+creation, so that all threads inherit the signal mask), and to process them
+using <code>sigwait()</code> in the signal handling routine.
+
+Using this approach, I overriden SIGINT behaviour: grid first tries to cleanup
+the ressources before exiting. The second SIGINT signal forces the termination.
+
+For synchronous signals, both signal handlers and <code>sigwait()</code> approaches can work.
+
+
+
+
+
+
+
+
+
+
+</pre></div></div>
+</body></html>
