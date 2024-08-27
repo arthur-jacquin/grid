@@ -3,8 +3,8 @@
 
 include config.mk
 
-SRC =
-LIB =
+SRC = client.c
+LIB = thread_management.c thread_routines.c
 OBJ = ${SRC:.c=.o}
 LIBOBJ = ${LIB:.c=.o}
 EXE = ${SRC:.c=}
