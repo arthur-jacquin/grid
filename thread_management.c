@@ -156,6 +156,7 @@ static void
 spawn_thread(enum thread_id thread_id, void *(*start_routine) (void *),
     const pthread_attr_t *attr)
 {
+    sem_init(&thread_sems[thread_id], 0, 0);
     pthread_create(&pthread_ids[thread_id], attr, start_routine,
         &thread_sems[thread_id]);
 }

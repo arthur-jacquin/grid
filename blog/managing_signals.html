@@ -64,7 +64,6 @@ Wrapping up all of the above give the following thread routine template:
 void *
 thread_start_routine(void *sem)
 {
-    sem_init(sem, 0, 0);
     ...                                 // initialization
     declare_as_initialized();
     if (should_terminate()) {

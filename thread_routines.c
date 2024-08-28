@@ -13,7 +13,6 @@ controller_routine(void *sem)
 {
     struct write_request write_request;
 
-    sem_init(sem, 0, 0);
     declare_as_initialized();
     if (should_terminate()) {
         goto cleanup;
@@ -39,7 +38,6 @@ state_manager_routine(void *sem)
 {
     struct write_request write_request;
 
-    sem_init(sem, 0, 0);
     declare_as_initialized();
     if (should_terminate()) {
         goto cleanup;
@@ -66,7 +64,6 @@ cleanup:
 void *
 sender_routine(void *sem)
 {
-    sem_init(sem, 0, 0);
     declare_as_initialized();
     return NULL;
 }
@@ -74,7 +71,6 @@ sender_routine(void *sem)
 void *
 receiver_routine(void *sem)
 {
-    sem_init(sem, 0, 0);
     declare_as_initialized();
     return NULL;
 }
