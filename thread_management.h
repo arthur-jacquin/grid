@@ -14,7 +14,6 @@ void capture_signals(void);
 int join_threads(void);
 void spawn_threads(void);
 
-void declare_as_initialized(void);
 void post_to(enum thread_id thread);
 void request_termination(int exit_status);
 int should_terminate(void);

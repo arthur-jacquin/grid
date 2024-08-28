@@ -53,6 +53,12 @@ until all threads are initialized (or until one fails). Notice that the function
 figures out which thread is calling by itself, so that the thread doesn't manage
 its own identity.
 
+EDIT: after further consideration, most initialization can be done statically
+(at compile time), so the synchronization step felt overkill. It is now removed
+(interfaces check by themselves if the ressources are ready), but the idea of
+figuring out the identity of a calling thread instead of relying on its
+self identification is still interesting.
+
 To clean ressources before termination, the <code>request_termination()</code> function is
 exposed to the threads. Instead of exiting immediately, it stores the
 termination request and notify the other threads, so that they can perform a

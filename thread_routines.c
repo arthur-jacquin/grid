@@ -13,11 +13,6 @@ controller_routine(void *sem)
 {
     struct write_request write_request;
 
-    declare_as_initialized();
-    if (should_terminate()) {
-        goto cleanup;
-    }
-
     // simulate some write requests, and exit
     for (int i = 0; i < 10; i++) {
         if (should_terminate()) {
@@ -37,11 +32,6 @@ void *
 state_manager_routine(void *sem)
 {
     struct write_request write_request;
-
-    declare_as_initialized();
-    if (should_terminate()) {
-        goto cleanup;
-    }
 
     while (1) {
         sem_wait(sem);
@@ -64,13 +54,11 @@ cleanup:
 void *
 sender_routine(void *sem)
 {
-    declare_as_initialized();
     return NULL;
 }
 
 void *
 receiver_routine(void *sem)
 {
-    declare_as_initialized();
     return NULL;
 }

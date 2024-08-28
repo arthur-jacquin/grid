@@ -11,16 +11,11 @@ void *cache_manager_routine(void *sem);
 void *sender_routine(void *sem);
 void *receiver_routine(void *sem);
 
-static int all_threads_initialized(void);
-static enum thread_id get_thread_id(void);
 static void spawn_thread(enum thread_id thread_id,
     void *(*start_routine) (void *), const pthread_attr_t *attr);
 static void *signal_handling_routine(void *arg);
 
 static int termination_exit_status, termination_requested;
-static int thread_init_states[THREAD_NB];
-static pthread_cond_t init_cond = PTHREAD_COND_INITIALIZER;
-static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t termination_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_t pthread_ids[THREAD_NB], signal_handling_pthread_id;
 static sem_t thread_sems[THREAD_NB];
@@ -72,20 +67,6 @@ spawn_threads(void)
 }
 
 void
-declare_as_initialized(void)
-{
-    // declare the calling thread as initialized and ready to operate
-    // block until all threads are initialized or one failed
-    pthread_mutex_lock(&init_mutex);
-    thread_init_states[get_thread_id()] = 1;
-    pthread_cond_broadcast(&init_cond);
-    while (!(all_threads_initialized() || should_terminate())) {
-        pthread_cond_wait(&init_cond, &init_mutex);
-    }
-    pthread_mutex_unlock(&init_mutex);
-}
-
-void
 post_to(enum thread_id thread)
 {
     sem_post(&thread_sems[thread]);
@@ -109,15 +90,9 @@ request_termination(int exit_status)
     termination_requested = 1;
     termination_exit_status = exit_status;
     pthread_mutex_unlock(&termination_mutex);
-    pthread_mutex_lock(&init_mutex);
-    if (all_threads_initialized()) {
-        for (int i = 0; i < THREAD_NB; i++) {
-            post_to(i);
-        }
-    } else {
-        pthread_cond_broadcast(&init_cond);
+    for (int i = 0; i < THREAD_NB; i++) {
+        post_to(i);
     }
-    pthread_mutex_unlock(&init_mutex);
 }
 
 int
@@ -127,29 +102,6 @@ should_terminate(void)
     int res = termination_requested;
     pthread_mutex_unlock(&termination_mutex);
     return res;
-}
-
-static int
-all_threads_initialized(void)
-{
-    // init_mutex should be locked by the caller
-    int res = 1;
-    for (int i = 0; i < THREAD_NB; i++) {
-        res &= thread_init_states[i];
-    }
-    return res;
-}
-
-static enum thread_id
-get_thread_id(void)
-{
-    pthread_t self = pthread_self();
-    for (int i = 0; i < THREAD_NB; i++) {
-        if (pthread_equal(self, pthread_ids[i])) {
-            return i;
-        }
-    }
-    return -1; // unreachable
 }
 
 static void

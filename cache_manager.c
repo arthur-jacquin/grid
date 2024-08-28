@@ -195,11 +195,6 @@ cache_manager_routine(void *sem)
 {
     struct cell_content cell_update;
 
-    declare_as_initialized();
-    if (should_terminate()) {
-        goto cleanup;
-    }
-
     while (1) {
         sem_wait(sem);
         if (should_terminate()) {
