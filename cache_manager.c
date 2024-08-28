@@ -2,6 +2,7 @@
 
 #include <pthread.h>
 #include <semaphore.h>
+#include <stddef.h>
 #include <string.h>
 
 #include "cache_manager.h"

@@ -1,7 +1,7 @@
 #include <pthread.h>
 #include <stddef.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "pthread_queue.h"
 #include "thread_management.h"
