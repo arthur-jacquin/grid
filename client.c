@@ -10,7 +10,7 @@ struct pthread_queue
         sizeof(struct area_request)),
     approved_modifs = PTHREAD_QUEUE_INITIALIZER(STATE_MANAGER, 0),
     cell_updates = PTHREAD_QUEUE_INITIALIZER(CACHE_MANAGER,
-        sizeof(struct cell_update)),
+        sizeof(struct cell_content)),
     cursor_pos = PTHREAD_QUEUE_INITIALIZER(SENDER, sizeof(struct cursor_pos)),
     local_modifs = PTHREAD_QUEUE_INITIALIZER(STATE_MANAGER, 0),
     modif_attempts = PTHREAD_QUEUE_INITIALIZER(SENDER, 0),

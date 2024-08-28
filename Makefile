@@ -4,7 +4,13 @@
 include config.mk
 
 SRC = client.c
-LIB = pthread_queue.c thread_management.c thread_routines.c
+LIB = \
+	cache_manager.c \
+	controller.c \
+	pthread_queue.c \
+	thread_management.c \
+	thread_routines.c \
+	types.c
 OBJ = ${SRC:.c=.o}
 LIBOBJ = ${LIB:.c=.o} clic.o
 EXE = ${SRC:.c=}

@@ -64,14 +64,6 @@ cleanup:
 }
 
 void *
-cache_manager_routine(void *sem)
-{
-    sem_init(sem, 0, 0);
-    declare_as_initialized();
-    return NULL;
-}
-
-void *
 sender_routine(void *sem)
 {
     sem_init(sem, 0, 0);
