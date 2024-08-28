@@ -12,7 +12,7 @@ LIB = \
 	thread_routines.c \
 	types.c
 OBJ = ${SRC:.c=.o}
-LIBOBJ = ${LIB:.c=.o} clic.o
+LIBOBJ = ${LIB:.c=.o} clic.o termbox2.o
 EXE = ${SRC:.c=}
 
 all: options ${EXE}
