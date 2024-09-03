@@ -1,5 +1,11 @@
-* pthread_queue.c
-* Makefile vs build.zig
+* everything ready to implement threads, starting with the cache manager
+    some refactoring
+    cache manager, LRU policy
+    controller with termbox, introducing a child thread, multithreading issues,
+        way to fallback if problem
+    propagating ^C
+    testing the cache
+* Makefile vs build.zig vs redo vs ...
 => https://makefiletutorial.com
 * client-server architecture, sockets, protocols
 * More on the data model: data types...
