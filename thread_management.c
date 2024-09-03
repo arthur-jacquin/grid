@@ -117,7 +117,7 @@ spawn_thread(enum thread_id thread_id, void *(*start_routine) (void *),
 static void *
 signal_handling_routine(void *sigmask)
 {
-    int sig, nb_sigint = 0;
+    int sig;
     sigset_t sigset;
 
     // add signals to the specified sigmask for custom handling
@@ -129,12 +129,11 @@ signal_handling_routine(void *sigmask)
         switch (sig) {
         case SIGINT:
             // try a clean termination
-            if (nb_sigint == 0) {
+            if (!should_terminate()) {
                 request_termination(EXIT_FAILURE);
             } else {
                 exit(EXIT_FAILURE);
             }
-            nb_sigint++;
             break;
         }
     }
