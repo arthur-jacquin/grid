@@ -9,6 +9,7 @@
 #include "client.h"
 #include "config.h"
 #include "controller.h"
+#include "display.h"
 #include "pthread_queue.h"
 #include "thread_management.h"
 #include "types.h"
@@ -24,7 +25,7 @@ struct cache_metadata {
 };
 
 static cache_id find_address(struct address address);
-static void link(cache_id a, cache_id b);
+static void dllist_link(cache_id a, cache_id b);
 static void process_cell_update(struct cell_content *cell_update);
 static int should_send_to_controller(struct address address);
 static int should_store(struct address address);
@@ -114,7 +115,7 @@ find_address(struct address address)
 }
 
 static void
-link(cache_id a, cache_id b)
+dllist_link(cache_id a, cache_id b)
 {
     metadata[a].next = b;
     metadata[b].prev = a;
@@ -164,7 +165,7 @@ store(struct cell_content *cell, cache_id index)
             index = nb_cached_cell++;
             is_full = nb_cached_cell == CACHE_SIZE;
             metadata[index].valid = 1;
-            link(most_recently_used, index);
+            dllist_link(most_recently_used, index);
             most_recently_used = index;
         }
         metadata[index].address = cell->address;
@@ -185,9 +186,9 @@ use(cache_id index)
     if (index == least_recently_used) {
         least_recently_used = metadata[index].next;
     } else {
-        link(metadata[index].prev, metadata[index].next);
+        dllist_link(metadata[index].prev, metadata[index].next);
     }
-    link(most_recently_used, index);
+    dllist_link(most_recently_used, index);
     most_recently_used = index;
 }
 

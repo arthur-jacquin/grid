@@ -7,6 +7,7 @@ SRC = client.c
 LIB = \
 	cache_manager.c \
 	controller.c \
+	display.c \
 	pthread_queue.c \
 	thread_management.c \
 	thread_routines.c \

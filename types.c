@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "types.h"
 
 int
@@ -15,4 +17,23 @@ address_in_area(struct address address, struct area area)
     row_in_range = (d = address.row - area.row) >= 0 && d < area.row_span;
     col_in_range = (d = address.col - area.col) >= 0 && d < area.col_span;
     return same_sheet && row_in_range && col_in_range;
+}
+
+int
+col_name(int x, char buf[])
+{
+    if (x < 26) {
+        buf[0] = 'A' + x;
+        return 1;
+    } else {
+        buf[0] = 'A' + x/26 - 1;
+        buf[1] = 'A' + x%26;
+        return 2;
+    }
+}
+
+int
+row_name(int y, char buf[])
+{
+    return sprintf(buf, "%d", y);
 }
