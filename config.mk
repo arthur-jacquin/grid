@@ -6,7 +6,9 @@ PREFIX = /usr/local
 MANPREFIX = ${PREFIX}/share/man
 
 # terminal color support
-# a default colorscheme is provided for TB_OUTPUT_{NORMAL,256,TRUECOLOR} modes
+# the default configuration file uses TB_OUTPUT_NORMAL mode by default, and
+# provides colorschemes for TB_OUTPUT_{NORMAL,256,TRUECOLOR} modes
+# -DTB_OPT_ATTR_W=32 is needed for TB_OUTPUT_TRUECOLOR mode support
 TBFLAGS  = -DTB_OUTPUT_MODE=TB_OUTPUT_NORMAL
 #TBFLAGS  = -DTB_OUTPUT_MODE=TB_OUTPUT_256
 #TBFLAGS  = -DTB_OPT_ATTR_W=32 -DTB_OUTPUT_MODE=TB_OUTPUT_TRUECOLOR
