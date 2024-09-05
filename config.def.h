@@ -28,4 +28,5 @@
 #define TB_COLOR_BG_HEADERS         0x303030
 #define TB_COLOR_FG_DEFAULT         TB_DEFAULT
 #define TB_COLOR_FG_HEADERS         TB_HI_BLACK
+#define TB_COLOR_FG_MISS            0x853693
 #endif // TB_OUTPUT_MODE

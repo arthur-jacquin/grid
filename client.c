@@ -6,8 +6,6 @@
 #include "types.h"
 
 struct pthread_queue
-    area_requests = PTHREAD_QUEUE_INITIALIZER(STATE_MANAGER,
-        sizeof(struct area_request)),
     approved_modifs = PTHREAD_QUEUE_INITIALIZER(STATE_MANAGER, 0),
     cell_updates = PTHREAD_QUEUE_INITIALIZER(CACHE_MANAGER,
         sizeof(struct cell_content)),
@@ -16,6 +14,8 @@ struct pthread_queue
     modif_attempts = PTHREAD_QUEUE_INITIALIZER(SENDER, 0),
     validations = PTHREAD_QUEUE_INITIALIZER(STATE_MANAGER,
         sizeof(struct validation)),
+    view_requests = PTHREAD_QUEUE_INITIALIZER(STATE_MANAGER,
+        sizeof(struct view_request)),
     write_requests = PTHREAD_QUEUE_INITIALIZER(STATE_MANAGER,
         sizeof(struct write_request));
 

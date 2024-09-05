@@ -3,12 +3,12 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "cache_manager.h"
 #include "client.h"
 #include "config.h"
-#include "controller.h"
 #include "display.h"
 #include "pthread_queue.h"
 #include "thread_management.h"
@@ -35,65 +35,62 @@ static void use(cache_id index);
 static cache_id least_recently_used, most_recently_used;
 static int is_full, nb_cached_cell;
 static pthread_mutex_t cache_mutex = PTHREAD_MUTEX_INITIALIZER;
-static struct area last_requested_area = {.sheet_id = -1};
 static struct cache_metadata metadata[CACHE_SIZE];
 static struct cell_content content_cache[CACHE_SIZE];
 static struct cell_display display_cache[CACHE_SIZE];
+static struct view last_requested_view = {.sheet_id = -1};
 
 void
-get_area(struct area area, int *hits, struct cell_display *dest,
-    struct address focus, int *focus_hit, struct cell_content *focus_dest)
+get_view(struct view view, struct address address, int *hit,
+    struct cell_content *dest)
 {
-    // hits and dest are expected to be of length area.row_span*area.col_span
-    // results are stored in a row-major order
+    // fill cells and hits buffers of view, and try to find the address
 
-    int index_in_buffer, nb_hits, nb_cells;
-    struct address address;
+    int index, nb_cells;
+    struct view_request view_request;
 
     pthread_mutex_lock(&cache_mutex);
 
     // init
-    last_requested_area = area;
-    nb_hits = 0;
-    nb_cells = area.row_span * area.col_span;
-    memset(hits, 0, nb_cells * sizeof(int));
-    *focus_hit = 0;
+    last_requested_view = view;
+    nb_cells = get_view_length(view);
+    view_request = (struct view_request) {
+        .view = view,
+        .hits = calloc(nb_cells, sizeof(int)),
+        .nb_hits = 0,
+    };
+    *hit = 0;
 
-    // explore the cache to fill the dest buffer with found cells
+    // explore the cache to fill the view.cells buffer with found cells
     for (int i = 0; i < CACHE_SIZE; i++) {
         if (!metadata[i].valid) {
             continue;
         }
-        if (address_in_area(address = metadata[i].address, area)) {
-            nb_hits++;
-            index_in_buffer = (address.row - area.row)*area.col_span +
-                (address.col - area.col);
-            hits[index_in_buffer] = 1;
-            dest[index_in_buffer] = display_cache[i];
+        if ((index = get_view_index(view, metadata[i].address)) >= 0) {
+            view.cells[index] = display_cache[i];
+            view.hits[index] = view_request.hits[index] = 1;
+            view_request.nb_hits++;
             use(i);
         }
-        if (address_equal(focus, address)) {
-            *focus_hit = 1;
-            *focus_dest = content_cache[i];
+        if (address_equal(address, metadata[i].address)) {
+            *hit = 1;
+            *dest = content_cache[i];
         }
     }
 
-    // issue requests to state manager for unfound cells
-    // TODO: more granular area requests ? or detect movements ?
-    if (nb_hits < nb_cells) {
-        pthread_queue_push(&area_requests, &area);
-    }
+    // issue request to state manager for unfound cells
+    pthread_queue_push(&view_requests, &view_request);
 
     pthread_mutex_unlock(&cache_mutex);
 }
 
 void
-get_cell(struct address focus, int *hit, struct cell_content *dest)
+get_cell(struct address address, int *hit, struct cell_content *dest)
 {
     int index;
 
     pthread_mutex_lock(&cache_mutex);
-    if ((index = find_address(focus)) < 0) {
+    if ((index = find_address(address)) < 0) {
         *hit = 0;
     } else {
         *hit = 1;
@@ -139,14 +136,14 @@ process_cell_update(struct cell_content *cell_update)
 static int
 should_send_to_controller(struct address address)
 {
-    return address_in_area(address, last_requested_area);
+    return address_in_view(address, last_requested_view);
 }
 
-// TODO: better predictions by storing a history of requested area ?
+// TODO: better predictions by storing a history of requested views ?
 static int
 should_store(struct address address)
 {
-    return address_in_area(address, last_requested_area);
+    return address_in_view(address, last_requested_view);
 }
 
 static cache_id
@@ -195,13 +192,12 @@ use(cache_id index)
 void *
 cache_manager_routine(void *sem)
 {
-    struct cell_content cell_update;
-
     while (1) {
         sem_wait(sem);
         if (should_terminate()) {
             goto cleanup;
         } else if (pthread_queue_is_non_empty(&cell_updates)) {
+            struct cell_content cell_update;
             pthread_queue_pop(&cell_updates, &cell_update, NULL);
             pthread_mutex_lock(&cache_mutex);
             process_cell_update(&cell_update);

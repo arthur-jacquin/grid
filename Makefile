@@ -9,6 +9,7 @@ LIB = \
 	controller.c \
 	display.c \
 	pthread_queue.c \
+	state_manager.c \
 	thread_management.c \
 	thread_routines.c \
 	types.c

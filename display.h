@@ -4,6 +4,8 @@
 #include "types.h"
 
 struct cell_display display_cell(const struct cell_content *cell);
+void draw_cell(const struct cell_content *cell);
+
 int init_termbox(void);
 void move_to_cursor(void);
 int set_force(int x, int y);

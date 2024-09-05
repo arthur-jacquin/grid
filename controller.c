@@ -5,35 +5,19 @@
 
 #include "config.h"
 #include "client.h"
-#include "controller.h"
 #include "display.h"
 #include "pthread_queue.h"
 #include "termbox2.h"
 #include "thread_management.h"
 #include "types.h"
 
+int cursor_content_found;
+struct cell_content cursor_content;
 struct cursor_pos cursor;
 
-static int is_ready(void);
 static void process_event(struct tb_event ev);
 
-static int ready, wait_for_resize;
-static pthread_mutex_t ready_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-void
-draw_cell(const struct cell_content *cell)
-{
-    // TODO
-    if (!is_ready()) return;
-}
-
-static int
-is_ready(void) {
-    pthread_mutex_lock(&ready_mutex);
-    int res = ready;
-    pthread_mutex_unlock(&ready_mutex);
-    return res;
-}
+static int wait_for_resize;
 
 static void
 process_event(struct tb_event ev)
@@ -87,9 +71,6 @@ controller_routine(void *sem)
 
     wait_for_resize = init_termbox();
     refresh_terminal();
-    pthread_mutex_lock(&ready_mutex);
-    ready = 1;
-    pthread_mutex_unlock(&ready_mutex);
 
     while (1) {
         rv = tb_peek_event(&ev, 100);

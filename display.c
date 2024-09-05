@@ -1,5 +1,7 @@
 #include <pthread.h>
+#include <stdlib.h>
 
+#include "cache_manager.h"
 #include "config.h"
 #include "display.h"
 #include "termbox2.h"
@@ -22,20 +24,53 @@
 #define ROWS_NB_MODULUS                     1000
 #endif // ROWS_NB_WIDTH
 
+extern int cursor_content_found;
+extern struct cell_content cursor_content;
 extern struct cursor_pos cursor;
 
-static int compute_spacing_values(void);
+static int enforce_view_changes(void);
+static uintattr_t get_cell_bg(int x, int y);
+static void transfer_view_knowledge(struct view *old, struct view *new);
 
-static char cell_buf[CELL_WIDTH + 1]; // TODO: dynamic size
-static int cell_width = CELL_WIDTH; // TODO: move to runtime settings
-static int nb_visible_cols, nb_visible_rows;
-static int term_height, term_width;
-static int xforce, xmin, xpad, yforce, ymin, ypad;
+static char cell_buf[CELL_WIDTH + 1];
+static int tb_initialized;
+static int term_height, term_width, xpad, ypad;
 static pthread_mutex_t tb_mutex = PTHREAD_MUTEX_INITIALIZER;
+static const struct cell_display missing_cell = {
+    .ch = "  miss  ",
+    .fg = TB_COLOR_FG_MISS,
+};
+static struct view view;
 
 struct cell_display
 display_cell(const struct cell_content *cell)
 {
+    // TODO
+    struct cell_display res;
+
+    memset(res.ch, ' ', CELL_WIDTH);
+    res.ch[CELL_WIDTH] = '\0';
+    res.ch[0] = 'r';
+    if (cell->state) {
+        res.ch[0] = 'S';
+    }
+    res.fg = TB_COLOR_FG_DEFAULT;
+    return res;
+}
+
+void
+draw_cell(const struct cell_content *cell)
+{
+    int is_ready;
+
+    // return early if interface isn't initialized
+    pthread_mutex_lock(&tb_mutex);
+    is_ready = tb_initialized;
+    pthread_mutex_unlock(&tb_mutex);
+    if (!is_ready) {
+        return;
+    }
+
     // TODO
 }
 
@@ -43,41 +78,59 @@ int
 init_termbox(void)
 {
     // return a non-null result if terminal is too small
+    int invalid_term_size;
+
     tb_init();
     tb_set_clear_attrs(TB_COLOR_FG_DEFAULT, TB_COLOR_BG_DEFAULT);
 #ifdef TB_MOUSE_SUPPORT
     tb_set_input_mode(tb_set_input_mode(TB_INPUT_CURRENT) | TB_INPUT_MOUSE);
 #endif // TB_MOUSE_SUPPORT
     tb_set_output_mode(TB_OUTPUT_MODE);
-    return set_term_size(tb_width(), tb_height());
+    invalid_term_size = set_term_size(tb_width(), tb_height());
+
+    pthread_mutex_lock(&tb_mutex);
+    tb_initialized = 1;
+    pthread_mutex_unlock(&tb_mutex);
+
+    return invalid_term_size;
 }
 
 void
 move_to_cursor(void)
 {
-    // TODO: manage sheet changes
+    static struct view old_view = {.sheet_id = -1};
 
-    // ensure adress is valid
+    // TODO: manage sheet changes (view.sheet, view.*force)
+
+    // ensure address is valid
     cursor.col = MAX(-1, MIN(cursor.col, NB_COLUMNS - 1));
     cursor.row = MAX(-1, cursor.row);
 
     // move view
-    if (cursor.col < xforce + xpad) {
-        xmin = xforce;
+    if (cursor.col < view.xforce + xpad) {
+        view.xmin = view.xforce;
     } else if (cursor.col >= NB_COLUMNS - xpad) {
-        xmin = NB_COLUMNS - nb_visible_cols;
+        view.xmin = NB_COLUMNS - view.xlen;
     } else {
-        xmin = MIN(xmin, cursor.col - xpad);
-        xmin = MAX(xmin, cursor.col + xpad + 1 - nb_visible_cols);
+        view.xmin = MIN(view.xmin, cursor.col - xpad);
+        view.xmin = MAX(view.xmin, cursor.col + xpad + 1 - view.xlen);
     }
-    if (cursor.row < yforce + ypad) {
-        ymin = yforce;
+    if (cursor.row < view.yforce + ypad) {
+        view.ymin = view.yforce;
     } else {
-        ymin = MIN(ymin, cursor.row - ypad);
-        ymin = MAX(ymin, cursor.row + ypad + 1 - nb_visible_rows);
+        view.ymin = MIN(view.ymin, cursor.row - ypad);
+        view.ymin = MAX(view.ymin, cursor.row + ypad + 1 - view.ylen);
     }
 
-    // TODO: if change in view (sheet, *min, *force), query cache manager
+    // if change in view, realloc and init buffers, query cache manager
+    if (!view_equal(old_view, view)) {
+        transfer_view_knowledge(&old_view, &view);
+        get_view(view, address_of_cursor(cursor), &cursor_content_found,
+            &cursor_content);
+    }
+
+    // remember new view
+    old_view = view;
 
     // redraw grid
     print_grid();
@@ -90,9 +143,9 @@ set_force(int x, int y)
     int invalid_term_size;
 
     // detect invalid terminal size
-    xforce = x;
-    yforce = y;
-    invalid_term_size = compute_spacing_values();
+    view.xforce = x;
+    view.yforce = y;
+    invalid_term_size = enforce_view_changes();
 
     // redraw grid
     print_grid();
@@ -106,12 +159,10 @@ set_term_size(int width, int height)
     // return a non-null result if terminal is too small
     int invalid_term_size;
 
-    // TODO: realloc and init view
-
     // detect invalid terminal size
     term_height = height;
     term_width = width;
-    invalid_term_size = compute_spacing_values();
+    invalid_term_size = enforce_view_changes();
 
     // redraw everything
     tb_clear();
@@ -141,7 +192,8 @@ print_command_status_line(void)
 void
 print_grid(void)
 {
-    int x, y;
+    int index, x, y;
+    const struct cell_display *cell;
 
     pthread_mutex_lock(&tb_mutex);
 
@@ -154,33 +206,31 @@ print_grid(void)
 #endif // ROWS_NB_WIDTH
 
     // columns header
-    memset(cell_buf, ' ', cell_width);
-    for (int i = 0; i < xforce + nb_visible_cols; i++) {
-        x = i < xforce ? i : xmin + i - xforce;
-        col_name(x, cell_buf + cell_width/2 - 1);
-        tb_print(ROWS_NB_WIDTH + i*cell_width, CELL_DATA_HEIGHT,
+    memset(cell_buf, ' ', CELL_WIDTH);
+    for (int i = 0; i < view.xforce + view.xlen; i++) {
+        x = i < view.xforce ? i : view.xmin + i - view.xforce;
+        col_name(x, cell_buf + CELL_WIDTH/2 - 1);
+        tb_print(ROWS_NB_WIDTH + i*CELL_WIDTH, CELL_DATA_HEIGHT,
             TB_COLOR_FG_HEADERS,
             x == cursor.col ? TB_COLOR_BG_CURSOR : TB_COLOR_BG_HEADERS,
             cell_buf);
     }
 
     // row numbers and cells
-    for (int i = 0; i < yforce + nb_visible_rows; i++) {
-        y = i < yforce ? i : ymin + i - yforce;
+    index = 0;
+    for (int i = 0; i < view.yforce + view.ylen; i++) {
+        y = i < view.yforce ? i : view.ymin + i - view.yforce;
 #if ROWS_NB_WIDTH
         tb_printf(0, CELL_DATA_HEIGHT + 1 + i, TB_COLOR_FG_HEADERS,
             y == cursor.row ? TB_COLOR_BG_CURSOR : TB_COLOR_BG_HEADERS,
             "%*d ", ROWS_NB_WIDTH - 1, (y + 1)%ROWS_NB_MODULUS);
 #endif // ROWS_NB_WIDTH
-        for (int j = 0; j < xforce + nb_visible_cols; j++) {
-            x = j < xforce ? j : xmin + j - xforce;
-            // TODO: print cell
-            memset(cell_buf, ' ', cell_width);
-            tb_print(ROWS_NB_WIDTH + j*cell_width, CELL_DATA_HEIGHT + 1 + i,
-                TB_COLOR_FG_HEADERS,
-                x == cursor.col && y == cursor.row ? TB_COLOR_BG_CURSOR :
-                    TB_COLOR_BG_DEFAULT,
-                cell_buf);
+        for (int j = 0; j < view.xforce + view.xlen; j++) {
+            x = j < view.xforce ? j : view.xmin + j - view.xforce;
+            cell = view.hits[index] ? &view.cells[index] : &missing_cell;
+            tb_print(ROWS_NB_WIDTH + j*CELL_WIDTH, CELL_DATA_HEIGHT + 1 + i,
+                cell->fg, get_cell_bg(x, y), cell->ch);
+            index++;
         }
     }
 
@@ -202,18 +252,53 @@ refresh_terminal(void)
 }
 
 static int
-compute_spacing_values(void)
+enforce_view_changes(void)
 {
     int invalid_term_size;
 
-    nb_visible_cols = (term_width - ROWS_NB_WIDTH) / cell_width - xforce;
-    nb_visible_rows = term_height - (CELL_DATA_HEIGHT + 2 + yforce);
-    invalid_term_size = nb_visible_cols < 1 || nb_visible_rows < 1 ||
+    view.xlen = (term_width - ROWS_NB_WIDTH)/CELL_WIDTH - view.xforce;
+    view.ylen = term_height - (CELL_DATA_HEIGHT + 2 + view.yforce);
+    invalid_term_size = view.xlen < 1 || view.ylen < 1 ||
         term_width < CELL_DATA_MINIMUM_WIDTH ||
         term_width < COMMAND_MINIMUM_WIDTH + STATUS_WIDTH;
-    xpad = MIN(XPAD, (nb_visible_cols - 1)/2);
-    ypad = MIN(YPAD, (nb_visible_rows - 1)/2);
+    xpad = MIN(XPAD, (view.xlen - 1)/2);
+    ypad = MIN(YPAD, (view.ylen - 1)/2);
     move_to_cursor();
 
     return invalid_term_size;
+}
+
+static uintattr_t
+get_cell_bg(int x, int y)
+{
+    return x == cursor.col && y == cursor.row ? TB_COLOR_BG_CURSOR :
+        TB_COLOR_BG_DEFAULT;
+}
+
+static void
+transfer_view_knowledge(struct view *old, struct view *new)
+{
+    // use old buffers to create new ones
+    int length;
+
+    // allocate new buffers
+    length = get_view_length(*new);
+    new->cells = malloc(length*sizeof(struct cell_display));
+    new->hits = calloc(length, sizeof(int));
+
+    // return early if uninitialized old buffers
+    if (!old->cells) {
+        return;
+    }
+
+    // copy known cells
+    if (old->sheet_id != new->sheet_id) {
+        goto end_copy;
+    }
+    // TODO
+end_copy:
+
+    // destroy old buffers
+    free(old->cells); old->cells = NULL;
+    free(old->hits); old->hits = NULL;
 }
