@@ -81,7 +81,7 @@ controller_routine(void *sem)
         switch (rv) {
         case TB_ERR_NO_EVENT:
             break;
-        default:
+        case TB_OK:
             if (ev.type == TB_EVENT_KEY && ev.key == TB_KEY_CTRL_C) {
                 kill(getpid(), SIGINT);
                 break;
