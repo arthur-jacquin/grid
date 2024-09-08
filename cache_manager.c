@@ -198,7 +198,7 @@ cache_manager_routine(void *sem)
             goto cleanup;
         } else if (pthread_queue_is_non_empty(&cell_updates)) {
             struct cell_content cell_update;
-            pthread_queue_pop(&cell_updates, &cell_update, NULL);
+            pthread_queue_pop(&cell_updates, &cell_update);
             pthread_mutex_lock(&cache_mutex);
             process_cell_update(&cell_update);
             pthread_mutex_unlock(&cache_mutex);

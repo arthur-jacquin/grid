@@ -13,7 +13,7 @@ pthread_queue_destroy(struct pthread_queue *queue)
     for (struct pthread_queue_elem *elem = queue->first_in, *next;
         elem && (next = elem->next, 1); elem = next) {
         if (queue->data_size == 0) {
-            free((void *) elem->payload);
+            free((void *) elem->indirect_payload);
         }
         free(elem);
     }
@@ -42,7 +42,7 @@ pthread_queue_is_non_empty(struct pthread_queue *queue)
 }
 
 int
-pthread_queue_pop(struct pthread_queue *queue, void *dest, const void **payload)
+pthread_queue_pop(struct pthread_queue *queue, void *dest)
 {
     int res;
     struct pthread_queue_elem *next;
@@ -51,10 +51,9 @@ pthread_queue_pop(struct pthread_queue *queue, void *dest, const void **payload)
     if (queue->first_in) {
         res = 0;
         if (queue->data_size == 0) {
-            *payload = queue->first_in->payload;
+            *((void **) dest) = (void *) queue->first_in->indirect_payload;
         } else {
-            memcpy(dest, queue->first_in + sizeof(*queue->first_in),
-                queue->data_size);
+            memcpy(dest, queue->first_in->direct_payload, queue->data_size);
         }
         next = queue->first_in->next;
         if (!next) {
@@ -75,9 +74,9 @@ pthread_queue_push(struct pthread_queue *queue, const void *src)
     struct pthread_queue_elem *new = malloc(sizeof(*new) + queue->data_size);
     new->next = NULL;
     if (queue->data_size == 0) {
-        new->payload = src;
+        new->indirect_payload = src;
     } else {
-        memcpy(new + sizeof(*new), src, queue->data_size);
+        memcpy(new->direct_payload, src, queue->data_size);
     }
     pthread_mutex_lock(&queue->mutex);
     if (queue->last_in) {
