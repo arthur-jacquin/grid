@@ -44,3 +44,9 @@ clean:
 	rm -f ${EXE} ${OBJ} ${LIBOBJ}
 
 .PHONY: all options clean dist install uninstall
+
+test: client
+	(valgrind --leak-check=full --show-leak-kinds=all ./$<) > log 2>&1
+	@echo "valgrind report is stored in log"
+
+.PHONY: test
