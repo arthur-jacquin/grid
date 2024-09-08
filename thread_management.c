@@ -35,9 +35,10 @@ capture_signals(void)
 
     // spawn a dedicated thread to detect and manage signals
     pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_create(&signal_handling_pthread_id, &attr, signal_handling_routine,
         &sigmask);
+    pthread_attr_destroy(&attr);
 }
 
 int
@@ -65,6 +66,7 @@ spawn_threads(void)
     spawn_thread(CACHE_MANAGER, cache_manager_routine, &attr);
     spawn_thread(SENDER, sender_routine, &attr);
     spawn_thread(RECEIVER, receiver_routine, &attr);
+    pthread_attr_destroy(&attr);
 }
 
 void
