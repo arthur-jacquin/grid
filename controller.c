@@ -95,6 +95,6 @@ controller_routine(void *sem)
     }
 
 cleanup:
-    tb_shutdown();
+    deinit_termbox();
     return NULL;
 }

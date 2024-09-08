@@ -36,13 +36,10 @@ struct view {
     // the xforce first columns and xlen columns starting at xmin are included
     // the same goes for y* and rows
     int xforce, xlen, xmin, yforce, ylen, ymin;
-    // cells and hits are expected to be either NULL or of length
-    // (xforce + xlen)*(yforce + ylen), and must be used with a row-major order
-    struct cell_display *cells;
-    int *hits;
+    // related buffers should be used with a row-major order
 };
 struct view_request {
-    struct view view; // hits and buf should be ignored
+    struct view view;
     int *hits, nb_hits;
 };
 

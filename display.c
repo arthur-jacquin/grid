@@ -42,6 +42,10 @@ static const struct cell_display missing_cell = {
 };
 static struct view view;
 
+// hits are cells buffers should be of length get_view_length(view)
+static int *hits = NULL;
+static struct cell_display *cells = NULL;
+
 struct cell_display
 display_cell(const struct cell_content *cell)
 {
@@ -72,6 +76,14 @@ draw_cell(const struct cell_content *cell)
     }
 
     // TODO
+}
+
+void
+deinit_termbox(void)
+{
+    tb_shutdown();
+    free(cells); cells = NULL;
+    free(hits); hits = NULL;
 }
 
 int
@@ -125,8 +137,8 @@ move_to_cursor(void)
     // if change in view, realloc and init buffers, query cache manager
     if (!view_equal(old_view, view)) {
         transfer_view_knowledge(&old_view, &view);
-        get_view(view, address_of_cursor(cursor), &cursor_content_found,
-            &cursor_content);
+        get_view(view, cells, hits, address_of_cursor(cursor),
+            &cursor_content, &cursor_content_found);
     }
 
     // remember new view
@@ -227,7 +239,7 @@ print_grid(void)
 #endif // ROWS_NB_WIDTH
         for (int j = 0; j < view.xforce + view.xlen; j++) {
             x = j < view.xforce ? j : view.xmin + j - view.xforce;
-            cell = view.hits[index] ? &view.cells[index] : &missing_cell;
+            cell = hits[index] ? &cells[index] : &missing_cell;
             tb_print(ROWS_NB_WIDTH + j*CELL_WIDTH, CELL_DATA_HEIGHT + 1 + i,
                 cell->fg, get_cell_bg(x, y), cell->ch);
             index++;
@@ -279,17 +291,14 @@ static void
 transfer_view_knowledge(struct view *old, struct view *new)
 {
     // use old buffers to create new ones
-    int length;
+    int view_length;
+    struct cell_display *new_cells;
+    int *new_hits;
 
     // allocate new buffers
-    length = get_view_length(*new);
-    new->cells = malloc(length*sizeof(struct cell_display));
-    new->hits = calloc(length, sizeof(int));
-
-    // return early if uninitialized old buffers
-    if (!old->cells) {
-        return;
-    }
+    view_length = get_view_length(*new);
+    new_cells = malloc(view_length*sizeof(*new_cells));
+    new_hits = calloc(view_length, sizeof(*new_hits));
 
     // copy known cells
     if (old->sheet_id != new->sheet_id) {
@@ -299,6 +308,6 @@ transfer_view_knowledge(struct view *old, struct view *new)
 end_copy:
 
     // destroy old buffers
-    free(old->cells); old->cells = NULL;
-    free(old->hits); old->hits = NULL;
+    free(cells); cells = new_cells;
+    free(hits); hits = new_hits;
 }

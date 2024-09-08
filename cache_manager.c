@@ -41,10 +41,12 @@ static struct cell_display display_cache[CACHE_SIZE];
 static struct view last_requested_view = {.sheet_id = -1};
 
 void
-get_view(struct view view, struct address address, int *hit,
-    struct cell_content *dest)
+get_view(struct view view, struct cell_display *cells, int *hits,
+    struct address address, struct cell_content *cell, int *hit)
 {
-    // fill cells and hits buffers of view, and try to find the address
+    // cells and and hits buffers must be of length get_view_length(view)
+    // try to retrieve the cached display of view cells in cells, and the
+    // content located at address in cell
 
     int index, nb_cells;
     struct view_request view_request;
@@ -59,7 +61,6 @@ get_view(struct view view, struct address address, int *hit,
         .hits = calloc(nb_cells, sizeof(int)),
         .nb_hits = 0,
     };
-    *hit = 0;
 
     // explore the cache to fill the view.cells buffer with found cells
     for (int i = 0; i < CACHE_SIZE; i++) {
@@ -67,14 +68,14 @@ get_view(struct view view, struct address address, int *hit,
             continue;
         }
         if ((index = get_view_index(view, metadata[i].address)) >= 0) {
-            view.cells[index] = display_cache[i];
-            view.hits[index] = view_request.hits[index] = 1;
+            cells[index] = display_cache[i];
+            hits[index] = view_request.hits[index] = 1;
             view_request.nb_hits++;
             use(i);
         }
         if (address_equal(address, metadata[i].address)) {
             *hit = 1;
-            *dest = content_cache[i];
+            *cell = content_cache[i];
         }
     }
 

@@ -6,6 +6,7 @@
 struct cell_display display_cell(const struct cell_content *cell);
 void draw_cell(const struct cell_content *cell);
 
+void deinit_termbox(void);
 int init_termbox(void);
 void move_to_cursor(void);
 int set_force(int x, int y);
